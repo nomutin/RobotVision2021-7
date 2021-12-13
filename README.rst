@@ -11,17 +11,21 @@ USAGE
 
 ``RobotVision2021-7`` ディレクトリで以下のコマンドを実行
 
-環境構築
+- 環境構築
+
     ``poetry install``
 
-実行
+
+- 実行
+
     ``poetry run python robotvision2021_7 -m``
 
-poetryが無くてもopencv-pythonが実行できる環境なら
+.. note::
+    poetryが無くてもopencv-pythonが実行できる環境なら
 
-    ``python robotvision2021_7 -m``
+        ``python robotvision2021_7 -m``
 
-で動きます
+    で動きます
 
 VERIFY
 -----
