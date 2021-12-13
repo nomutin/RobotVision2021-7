@@ -4,8 +4,6 @@
 
   腕立て伏せのフォームが悪かったら本気で怒号を飛ばすアプリ
 
-author: 長瀬・野村
-
 TODO:
     get_coordinates:
     * 頭の向きから足を判別する
@@ -16,10 +14,11 @@ TODO:
 
 """
 
-import cv2
 import dataclasses
+import statistics
+
+import cv2
 import numpy as np
-import statistics as st
 
 
 @dataclasses.dataclass
@@ -87,7 +86,7 @@ def create_fgmask(bg, frame, kernel_size):
     Args:
         bg(np.ndarray):     差分をとるための背景画像
         frame(np.ndarray):  背景と比較する毎フレーム
-        kernel_size(int):   体のラインを強調するための膨張・収縮のサイズ
+        kernel_size(int):   体のラインを強調するための膨張・収縮を行うカーネルサイズ
 
     Returns:
         fgmask(np.ndarray): 背景との差分(2値画像)
@@ -111,7 +110,7 @@ def get_coordinates(stats, labels, head, foot):
     x1 = x0 + w
     y1 = y0 + h
 
-    head.x = int(st.median(np.append(np.nonzero(labels[y0, x0:x1])[0] + x0, head.x)))
+    head.x = int(statistics.median(np.append(np.nonzero(labels[y0, x0:x1])[0] + x0, head.x)))
     head.y = y0
 
     return x0, y0, w, h, x1, y1
