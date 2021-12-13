@@ -18,7 +18,7 @@ import statistics
 import cv2
 import numpy as np
 
-from helpers import Coordinate
+from helpers import Coordinate, NotEnoughAreasError
 
 
 def get_background():
@@ -88,7 +88,18 @@ def get_coordinates(stats, labels, head, foot, waist, rect_images):
 def get_vertices(bool_image):
     nlabels, labels, stats, _ = cv2.connectedComponentsWithStats(bool_image)
 
+    if nlabels <= 2:
+        raise NotEnoughAreasError
 
+    first_idx, second_idx, *_ = stats[:, 4].argsort()[-3:-1]
+    x0 = min(stats[first_idx][0], stats[second_idx][0])
+    y0 = min(stats[first_idx][1], stats[second_idx][1])
+    w = max(stats[first_idx][2], stats[second_idx][2])
+    h = max(stats[first_idx][3], stats[second_idx][3])
+    x1 = x0 + w
+    y1 = y0 + h
+
+    return x0, x1, y0, y1
 
 
 def main():

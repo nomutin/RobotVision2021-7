@@ -17,6 +17,11 @@ USAGE
 実行
     ``poetry run python robotvision2021_7 -m``
 
+poetryが無くてもopencv-pythonが実行できる環境なら
+
+    ``python robotvision2021_7 -m``
+
+で動きます
 
 VERIFY
 -----
