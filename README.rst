@@ -20,12 +20,12 @@ USAGE
 
     ``poetry run python robotvision2021_7 -m``
 
-.. note::
-    poetryが無くてもopencv-pythonが実行できる環境なら
 
-        ``python robotvision2021_7 -m``
+poetryが無くてもopencv-pythonが実行できる環境なら
 
-    で動きます
+    ``python robotvision2021_7 -m``
+
+で動きます
 
 VERIFY
 -----

@@ -1,14 +1,8 @@
 """RobotVision2021-7
 
-* 腕立て伏せ激励アプリ
-
   腕立て伏せのフォームが悪かったら本気で怒号を飛ばすアプリ
 
 TODO:
-    get_coordinates:
-    * 腰をの位置を前回の方法から判別する
-    * docstringを書く
-    General:
     * 怒号を録音する
 
 """
@@ -33,7 +27,7 @@ def get_background():
     cap = cv2.VideoCapture(0)
 
     while cv2.waitKey(1) != ord("s"):
-        cv2.imshow("camera", cap.read()[1])
+        cv2.imshow("press s key to take a background photo", cap.read()[1])
     else:
         _, frame = cap.read()
         cap.release()
@@ -102,8 +96,33 @@ def get_vertices(bool_image):
     return x0, x1, y0, y1
 
 
+def stand_by(bg, x_y_ratio, area_th):
+    cap = cv2.VideoCapture(0)
+
+    while cv2.waitKey(1) != ord("q"):
+        _, frame = cap.read()
+
+        fgmask = create_fgmask(bg, frame, 8)
+
+        try:
+            x0, x1, y0, y1, = get_vertices(fgmask)
+            print((x1 - x0) * (y1 - y0), (x1 - x0)/(y1 - y0))
+            if (x1 - x0) > (y1 - y0) * x_y_ratio and (x1 - x0) * (y1 - y0) > area_th:
+                break
+
+            cv2.rectangle(frame, (x0, y0), (x1, y1), (0, 0, 255), 5)
+            cv2.imshow("Waiting until in the push-up position", frame)
+
+        except NotEnoughAreasError:
+            continue
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+
 def main():
     bg = get_background()
+    stand_by(bg, 3.2, 60000)
 
     head = Coordinate()
     waist = Coordinate()
