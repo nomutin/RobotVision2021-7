@@ -6,7 +6,6 @@
 
 TODO:
     get_coordinates:
-    * 頭の向きから足を判別する
     * 腰をの位置を前回の方法から判別する
     * docstringを書く
     General:
@@ -14,49 +13,12 @@ TODO:
 
 """
 
-import dataclasses
 import statistics
 
 import cv2
 import numpy as np
 
-
-@dataclasses.dataclass
-class Coordinate:
-    """座標を管理するクラス
-
-    x・yが代入されたとき，変化量がthを上回る場合，変化量を(1-mom)倍に抑えるようにする
-        -> 座標がピョンピョン跳ぶのを防ぐ
-
-    """
-
-    x: int = 0
-    y: int = 0
-    th: int = 25
-    mom: float = 0.9
-
-    def __setattr__(self, key, value):
-        try:
-            if abs(self.__getattribute__(key) - value) >= self.th:
-                super().__setattr__(key, int(self.__getattribute__(key) * self.mom + value * (1 - self.mom)))
-            else:
-                super().__setattr__(key, value)
-
-        except AttributeError:
-            super().__setattr__(key, value)
-
-    def draw(self, image, size=15):
-        """(self.x, self.y)に点をプロットするメソッド
-
-        Args:
-            image(np.ndarray): 点をプロットする対象の画像
-            size(int):         点の半径
-
-        Returns:
-            None
-        """
-
-        cv2.circle(image, (self.x, self.y), size, (234, 145, 152), -1)
+from helpers import Coordinate
 
 
 def get_background():
@@ -101,7 +63,7 @@ def create_fgmask(bg, frame, kernel_size):
     return fgmask
 
 
-def get_coordinates(stats, labels, head, foot):
+def get_coordinates(stats, labels, head, foot, waist, rect_images):
     first_idx, second_idx, *_ = stats[:, 4].argsort()[-3:-1]
     x0 = min(stats[first_idx][0], stats[second_idx][0])
     y0 = min(stats[first_idx][1], stats[second_idx][1])
@@ -113,16 +75,30 @@ def get_coordinates(stats, labels, head, foot):
     head.x = int(statistics.median(np.append(np.nonzero(labels[y0, x0:x1])[0] + x0, head.x)))
     head.y = y0
 
-    return x0, y0, w, h, x1, y1
+    if head.x < (x0 + w * 0.5):
+        foot.x = x1
+    else:
+        foot.x = x0
+    foot.y = y1
+
+    for image in rect_images:
+        cv2.rectangle(image, (x0, y0), (x1, y1), (0, 0, 255), 5)
+
+
+def get_vertices(bool_image):
+    nlabels, labels, stats, _ = cv2.connectedComponentsWithStats(bool_image)
+
+
 
 
 def main():
     bg = get_background()
-    cap = cv2.VideoCapture(0)
 
     head = Coordinate()
     waist = Coordinate()
     foot = Coordinate()
+
+    cap = cv2.VideoCapture(0)
 
     while True:
         _, frame = cap.read()
@@ -134,16 +110,20 @@ def main():
         if nlabels <= 2:
             continue
 
-        x0, y0, w, h, x1, y1 = get_coordinates(stats, labels, head, foot)
-        cv2.rectangle(src, (x0, y0), (x1, y1), (0, 0, 255), 5)
+        get_coordinates(stats, labels, head, foot, waist, [src, frame])
 
         head.draw(image=src)
+        head.draw(image=frame)
+        foot.draw(image=src)
+        foot.draw(image=frame)
         cv2.imshow('mask', src)
         cv2.imshow("flow", frame)
 
         if cv2.waitKey(1) == ord("q"):
-            cv2.destroyAllWindows()
             break
+
+    cap.release()
+    cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':
