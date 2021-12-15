@@ -5,6 +5,22 @@
 腕立て伏せのフォームが悪いと本気でブチギレてくるプログラム
 =====
 
+CONFIG
+-----
+- ``RobotVision2021-7/core.py``
+    main()など全体の流れが書いてある
+
+- ``RobotVision2021-7/helpers.py``
+    BodyCoordinates()などcore.pyに載せると冗長になる部分をこっちに書いてる
+    ある意味ここが一番大事
+
+- ``RobotVision2021-7/constants.py``
+    しきい値などのパラメータはここにまとめてある
+
+- ``pyproject.toml`` ・ ``poetry.lock``
+    おまじない
+
+
 USAGE
 -----
 事前にpip等で Poetry_ を入れること
