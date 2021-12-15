@@ -12,7 +12,8 @@ import statistics
 import cv2
 import numpy as np
 
-from helpers import Coordinate, NotEnoughAreasError
+from constants import *
+from helpers import BodyCoordinates, NotEnoughAreasError
 
 
 def get_background():
@@ -57,29 +58,7 @@ def create_fgmask(bg, frame, kernel_size):
     return fgmask
 
 
-def get_coordinates(stats, labels, head, foot, waist, rect_images):
-    first_idx, second_idx, *_ = stats[:, 4].argsort()[-3:-1]
-    x0 = min(stats[first_idx][0], stats[second_idx][0])
-    y0 = min(stats[first_idx][1], stats[second_idx][1])
-    w = max(stats[first_idx][2], stats[second_idx][2])
-    h = max(stats[first_idx][3], stats[second_idx][3])
-    x1 = x0 + w
-    y1 = y0 + h
-
-    head.x = int(statistics.median(np.append(np.nonzero(labels[y0, x0:x1])[0] + x0, head.x)))
-    head.y = y0
-
-    if head.x < (x0 + w * 0.5):
-        foot.x = x1
-    else:
-        foot.x = x0
-    foot.y = y1
-
-    for image in rect_images:
-        cv2.rectangle(image, (x0, y0), (x1, y1), (0, 0, 255), 5)
-
-
-def get_vertices(bool_image):
+def get_coordinates(bool_image, body):
     nlabels, labels, stats, _ = cv2.connectedComponentsWithStats(bool_image)
 
     if nlabels <= 2:
@@ -93,59 +72,32 @@ def get_vertices(bool_image):
     x1 = x0 + w
     y1 = y0 + h
 
-    return x0, x1, y0, y1
+    body.head.x = int(statistics.median(np.append(np.nonzero(labels[y0, x0:x1])[0] + x0, body.head.x)))
+    body.head.y = y0
 
-
-def stand_by(bg, x_y_ratio, area_th):
-    cap = cv2.VideoCapture(0)
-
-    while cv2.waitKey(1) != ord("q"):
-        _, frame = cap.read()
-
-        fgmask = create_fgmask(bg, frame, 8)
-
-        try:
-            x0, x1, y0, y1, = get_vertices(fgmask)
-            print((x1 - x0) * (y1 - y0), (x1 - x0)/(y1 - y0))
-            if (x1 - x0) > (y1 - y0) * x_y_ratio and (x1 - x0) * (y1 - y0) > area_th:
-                break
-
-            cv2.rectangle(frame, (x0, y0), (x1, y1), (0, 0, 255), 5)
-            cv2.imshow("Waiting until in the push-up position", frame)
-
-        except NotEnoughAreasError:
-            continue
-
-    cap.release()
-    cv2.destroyAllWindows()
+    if body.head.x < (x0 + (x1 - x0) * 0.5):
+        body.foot.x = x1
+    else:
+        body.foot.x = x0
+    body.foot.y = y1
 
 
 def main():
     bg = get_background()
-    stand_by(bg, 3.2, 60000)
 
-    head = Coordinate()
-    waist = Coordinate()
-    foot = Coordinate()
-
+    body = BodyCoordinates()
     cap = cv2.VideoCapture(0)
 
     while True:
         _, frame = cap.read()
 
         fgmask = create_fgmask(bg, frame, 8)
-        nlabels, labels, stats, _ = cv2.connectedComponentsWithStats(fgmask)
         src = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2BGR)
 
-        if nlabels <= 2:
-            continue
+        get_coordinates(bool_image=fgmask, body=body)
 
-        get_coordinates(stats, labels, head, foot, waist, [src, frame])
+        body.draw(15, src, waist=False)
 
-        head.draw(image=src)
-        head.draw(image=frame)
-        foot.draw(image=src)
-        foot.draw(image=frame)
         cv2.imshow('mask', src)
         cv2.imshow("flow", frame)
 

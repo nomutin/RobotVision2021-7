@@ -12,6 +12,8 @@ import dataclasses
 
 import cv2
 
+from constants import *
+
 
 @dataclasses.dataclass
 class Coordinate:
@@ -22,10 +24,10 @@ class Coordinate:
 
     """
 
-    x: int = 0
-    y: int = 0
-    th: int = 25
-    mom: float = 0.9
+    x: int
+    y: int
+    th: int
+    mom: float
 
     def __setattr__(self, key, value):
         try:
@@ -37,18 +39,31 @@ class Coordinate:
         except AttributeError:
             super().__setattr__(key, value)
 
-    def draw(self, image, size=15):
-        """(self.x, self.y)に点をプロットするメソッド
-
-        Args:
-            image(np.ndarray): 点をプロットする対象の画像
-            size(int):         点の半径
-
-        Returns:
-            None
-        """
-
+    def draw(self, image, size):
         cv2.circle(image, (self.x, self.y), size, (234, 145, 152), -1)
+
+
+class BodyCoordinates:
+    def __init__(self):
+        self.head = Coordinate(x=0, y=0, th=COORDINATE_MOVEMENT_TH, mom=COORDINATE_MOMENTUM)
+        self.foot = Coordinate(x=0, y=0, th=COORDINATE_MOVEMENT_TH, mom=COORDINATE_MOMENTUM)
+        self.waist = Coordinate(x=0, y=0, th=COORDINATE_MOVEMENT_TH, mom=COORDINATE_MOMENTUM)
+
+    @property
+    def x_y_ratio(self):
+        return abs(self.head.x - self.foot.x) / (self.head.y - self.foot.y)
+
+    @property
+    def area(self):
+        return (self.head.x - self.foot.x) * (self.head.y - self.foot.y)
+
+    def draw(self, size, image, head=True, foot=True, waist=True):
+        if head:
+            self.head.draw(image, size)
+        if foot:
+            self.foot.draw(image, size)
+        if waist:
+            self.waist.draw(image, size)
 
 
 class NotEnoughAreasError(Exception):
