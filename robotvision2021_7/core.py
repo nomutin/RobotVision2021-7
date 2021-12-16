@@ -46,8 +46,10 @@ def stand_by(bg, body):
         try:
             body.get_coordinates(fgmask)
 
-            if body.x_y_ratio > STAND_BY_TH_X_Y_RATIO and body.area > STAND_BY_TH_AREA:
+            if body.x_y_ratio > STAND_BY_TH_X_Y_RATIO and frame.size * 0.05 < body.area < frame.size * 0.5:
                 break
+
+            print(body.area)
 
             body.draw(src)
             cv2.imshow("Waiting until in the push-up position", src)
@@ -75,17 +77,18 @@ def create_fgmask(bg, frame, kernel_size):
     fgbg = cv2.bgsegm.createBackgroundSubtractorMOG()
     fgbg.apply(bg)
     fgmask = fgbg.apply(frame)
-    fgmask = cv2.dilate(fgmask, kernel)
-    fgmask = cv2.erode(fgmask, kernel)
-    return fgmask
+    hsv_mask = cv2.medianBlur(fgmask, ksize=9)
+    hsv_mask = cv2.erode(hsv_mask, kernel)
+    hsv_mask = cv2.dilate(hsv_mask, kernel)
+    return hsv_mask
 
 
 def main():
     bg = get_background()
 
     body = BodyCoordinates()
-    stand_by(bg, body)
     cap = cv2.VideoCapture(0)
+    stand_by(bg, body)
 
     while True:
         _, frame = cap.read()
@@ -93,7 +96,21 @@ def main():
         fgmask = create_fgmask(bg, frame, 8)
         src = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2BGR)
 
-        body.get_coordinates(fgmask)
+        try:
+            body.get_coordinates(fgmask)
+
+        except NotEnoughAreasError:
+            continue
+
+        if body.waist.y - (body.head.y + body.foot.y) / 2 > WAIST_TH:
+            print('下')
+        elif body.waist.y - (body.head.y + body.foot.y) / 2 < -WAIST_TH:
+            print('上')
+        else:
+            print('ok')
+
+        body.draw(image=src)
+        body.draw(image=frame)
 
         cv2.imshow('mask', src)
         cv2.imshow("flow", frame)
