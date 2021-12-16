@@ -13,6 +13,7 @@ import statistics
 
 import cv2
 import numpy as np
+import simpleaudio
 
 from constants import *
 
@@ -77,14 +78,15 @@ class BodyCoordinates:
         self.foot.y = self.head.y + h
 
         self.waist.x = (self.head.x + self.foot.x) // 2
-        # waist_min = np.append(np.nonzero(labels[self.head.y: self.foot.y, self.waist.x])[0] + self.head.y, self.waist.y).min()
-        # waist_max = np.append(self.head.y + np.nonzero(labels[self.head.y: self.foot.y, self.waist.x])[0], self.waist.y).max()
-        # self.waist.y = (waist_max + waist_min) // 2
-        self.waist.y = int(
-            statistics.median(
-                np.append(self.head.y + np.nonzero(labels[self.head.y: self.foot.y, self.waist.x])[0], self.waist.y)
-            )
-        )
+        waist_min = np.append(np.nonzero(labels[self.head.y: self.foot.y, self.waist.x])[0] + self.head.y, self.waist.y).min()
+        waist_max = np.append(self.head.y + np.nonzero(labels[self.head.y: self.foot.y, self.waist.x])[0], self.waist.y).max()
+        self.waist.y = (waist_max + waist_min) // 2
+
+        # self.waist.y = int(
+        #     statistics.median(
+        #         np.append(self.head.y + np.nonzero(labels[self.head.y: self.foot.y, self.waist.x])[0], self.waist.y)
+        #     )
+        # )
 
     def draw(self, image, _head=True, _foot=True, _waist=True, _rect=True):
         if _head:
@@ -99,3 +101,15 @@ class BodyCoordinates:
 
 class NotEnoughAreasError(Exception):
     pass
+
+
+class Sound:
+    def __init__(self):
+        self.play_obj = None
+
+    def play(self, file):
+        if self.play_obj.is_playing():
+            return
+
+        wav_obj = simpleaudio.WaveObject.from_wave_file(file)
+        self.play_obj = wav_obj.play()

@@ -7,11 +7,13 @@ TODO:
 
 """
 
+import time
+
 import cv2
 import numpy as np
 
 from constants import *
-from helpers import BodyCoordinates, NotEnoughAreasError
+from helpers import BodyCoordinates, NotEnoughAreasError, Sound
 
 
 def get_background():
@@ -24,7 +26,6 @@ def get_background():
     """
 
     cap = cv2.VideoCapture(0)
-
     while cv2.waitKey(1) != ord("s"):
         cv2.imshow("press s key to take a background photo", cap.read()[1])
     else:
@@ -46,16 +47,14 @@ def stand_by(bg, body):
         try:
             body.get_coordinates(fgmask)
 
-            if body.x_y_ratio > STAND_BY_TH_X_Y_RATIO and frame.size * 0.05 < body.area < frame.size * 0.5:
-                break
-
-            print(body.area)
-
-            body.draw(src)
-            cv2.imshow("Waiting until in the push-up position", src)
-
         except NotEnoughAreasError:
-            continue
+            pass
+
+        if body.x_y_ratio > STAND_BY_TH_X_Y_RATIO and frame.size * 0.05 < body.area < frame.size * 0.5:
+            break
+
+        body.draw(src)
+        cv2.imshow("Waiting until in the push-up position", src)
 
     cap.release()
     cv2.destroyAllWindows()
@@ -77,7 +76,7 @@ def create_fgmask(bg, frame, kernel_size):
     fgbg = cv2.bgsegm.createBackgroundSubtractorMOG()
     fgbg.apply(bg)
     fgmask = fgbg.apply(frame)
-    hsv_mask = cv2.medianBlur(fgmask, ksize=9)
+    hsv_mask = cv2.medianBlur(fgmask, ksize=5)
     hsv_mask = cv2.erode(hsv_mask, kernel)
     hsv_mask = cv2.dilate(hsv_mask, kernel)
     return hsv_mask
@@ -85,30 +84,60 @@ def create_fgmask(bg, frame, kernel_size):
 
 def main():
     bg = get_background()
-
     body = BodyCoordinates()
     cap = cv2.VideoCapture(0)
+
     stand_by(bg, body)
+
+    start_time = time.time()
+    displacements = []
+    sound = Sound()
+    length = 0
+    low_timer = 0
+    max_h = body.foot.y - body.head.y
 
     while True:
         _, frame = cap.read()
-
         fgmask = create_fgmask(bg, frame, 8)
         src = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2BGR)
-
         try:
             body.get_coordinates(fgmask)
 
         except NotEnoughAreasError:
-            continue
+            pass
 
-        if body.waist.y - (body.head.y + body.foot.y) / 2 > WAIST_TH:
-            print('下')
-        elif body.waist.y - (body.head.y + body.foot.y) / 2 < -WAIST_TH:
-            print('上')
+        # if body.waist.y - (body.head.y + body.foot.y) / 2 > WAIST_TH:
+        #     print('下')
+        # elif body.waist.y - (body.head.y + body.foot.y) / 2 < -WAIST_TH:
+        #     print('上')
+        # else:
+        #     print('ok')
+
+        displacements.append(body.foot.y - body.head.y)
+        if len(displacements) >= 1500:
+            displacements.pop(0)
+
+        if time.time() - start_time > VELOCITY_MEASURE_TIME:
+            if length == 0:
+                length = len(displacements)
+
+            v = abs(displacements[-1] - displacements[-length])
+
+            # if v > v_th:
+            #     sound.play('voice/test.wav')
+
+        if max_h * 0.4 > displacements[-1]:
+            if low_timer == 0:
+                low_timer = time.time()
+                print('スタート')
+
         else:
-            print('ok')
+            # low_timer.stop
+            if (time.time() - low_timer) < 3 and low_timer != 0:
+                print('早い')
+            low_timer = 0
 
+        print(low_timer)
         body.draw(image=src)
         body.draw(image=frame)
 
