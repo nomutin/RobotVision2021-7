@@ -9,7 +9,7 @@
 
 
 import dataclasses
-import statistics
+import time
 
 import cv2
 import numpy as np
@@ -42,15 +42,16 @@ class Coordinate:
         except AttributeError:
             super().__setattr__(key, value)
 
-    def draw(self, image):
-        cv2.circle(image, (self.x, self.y), 15, (234, 145, 152), -1)
-
 
 class BodyCoordinates:
     def __init__(self):
         self.head = Coordinate(x=0, y=0, th=COORDINATE_MOVEMENT_TH, mom=COORDINATE_MOMENTUM)
         self.foot = Coordinate(x=0, y=0, th=COORDINATE_MOVEMENT_TH, mom=COORDINATE_MOMENTUM)
         self.waist = Coordinate(x=0, y=0, th=COORDINATE_MOVEMENT_TH, mom=COORDINATE_MOMENTUM)
+
+        self.max_body_height = 0
+        self.displacements = []
+        self.length_until_v_measure_time = 0
 
     @property
     def x_y_ratio(self):
@@ -69,11 +70,8 @@ class BodyCoordinates:
         if nlabels <= 1:
             raise NotEnoughAreasError
 
-        first_idx, *_ = stats[:, 4].argsort()[-2:-1]
-        self.head.x = stats[first_idx][0]
-        self.head.y = stats[first_idx][1]
-        w = stats[first_idx][2]
-        h = stats[first_idx][3]
+        idx = stats[:, 4].argsort()[-2]
+        self.head.x, self.head.y, w, h, *_ = stats[idx]
         self.foot.x = self.head.x + w
         self.foot.y = self.head.y + h
 
@@ -81,12 +79,6 @@ class BodyCoordinates:
         waist_min = np.append(np.nonzero(labels[self.head.y: self.foot.y, self.waist.x])[0] + self.head.y, self.waist.y).min()
         waist_max = np.append(self.head.y + np.nonzero(labels[self.head.y: self.foot.y, self.waist.x])[0], self.waist.y).max()
         self.waist.y = (waist_max + waist_min) // 2
-
-        # self.waist.y = int(
-        #     statistics.median(
-        #         np.append(self.head.y + np.nonzero(labels[self.head.y: self.foot.y, self.waist.x])[0], self.waist.y)
-        #     )
-        # )
 
     def draw(self, image, _head=True, _foot=True, _waist=True, _rect=True):
         if _head:
@@ -97,6 +89,14 @@ class BodyCoordinates:
             cv2.circle(image, (self.waist.x, self.waist.y), 15, (234, 145, 152), -1)
         if _rect:
             cv2.rectangle(image, (self.head.x, self.head.y), (self.foot.x, self.foot.y), (0, 0, 255), 5)
+
+    def get_max_body_height(self):
+        self.max_body_height = self.foot.y - self.head.y
+
+    def get_body_height_displacements(self):
+        self.displacements.append(self.foot.y - self.head.y)
+        if len(self.displacements) >= 1500:
+            self.displacements.pop(0)
 
 
 class NotEnoughAreasError(Exception):
@@ -113,3 +113,29 @@ class Sound:
 
         wav_obj = simpleaudio.WaveObject.from_wave_file(file)
         self.play_obj = wav_obj.play()
+
+
+class Timer:
+    def __init__(self):
+        self.time = 0
+        self.lap_time = 0
+
+    @property
+    def current_time(self):
+        return time.time() - self.time
+
+    def start(self):
+        self.time = time.time()
+
+    def reset(self):
+        self.time = 0
+
+    def lap_timer_start(self):
+        self.lap_time = time.time()
+
+    def lap_timer_reset(self):
+        self.lap_time = 0
+
+    @property
+    def current_lap_time(self):
+        return time.time() - self.lap_time

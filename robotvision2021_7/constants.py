@@ -1,22 +1,20 @@
-"""定数を管理するファイル
-
-
-"""
+# 定数を管理するファイル
 
 from typing import Final
 
+# --- Coordinates()関連 ---
+COORDINATE_MOVEMENT_TH: Final = 25   # 座標がワープした，と判断する移動量のしきい値
+COORDINATE_MOMENTUM: Final = 0.9     # 座標がワープした時の変化を抑える割合
 
-COORDINATE_MOVEMENT_TH: Final = 25
-COORDINATE_MOMENTUM: Final = 0.9
-
-STAND_BY_TH_X_Y_RATIO: Final = 2.6
-STAND_BY_TH_AREA_MIN: Final = 60000
-STAND_BY_TH_AREA: Final = 60000
+# --- stand_by()関連 ---
+STAND_BY_TH_X_Y_RATIO: Final = 2.6   # 腕立て伏せの姿勢になった，と判断する体の輪郭の縦横比
+STAND_BY_AREA_MIN: Final = 0.05      # 腕立て伏せの姿勢になった，と判断する体の面積の最小値
+STAND_BY_AREA_MAX: Final = 0.5       # 腕立て伏せの姿勢になった，と判断する体の面積の最大値
 
 WAIST_TH: Final = 30
 
-LOW_FORM_TIME = 2
-VELOCITY_MEASURE_TIME = 0.5
+LOW_FORM_TIME: Final = 2
+VELOCITY_MEASURE_TIME: Final = 0.5
+
 
 v_th = 50
-

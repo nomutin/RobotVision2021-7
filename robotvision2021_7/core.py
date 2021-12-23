@@ -13,7 +13,12 @@ import cv2
 import numpy as np
 
 from constants import *
-from helpers import BodyCoordinates, NotEnoughAreasError, Sound
+from helpers import (
+    BodyCoordinates,
+    NotEnoughAreasError,
+    Sound,
+    Timer
+)
 
 
 def get_background():
@@ -36,12 +41,26 @@ def get_background():
         return frame
 
 
-def stand_by(bg, body):
+def stand_by(background, body):
+    """腕立て伏せの体制になるまでスタンバイする関数
+
+    体の輪郭の縦横比がSTAND_BY_TH_X_Y_RATIO以上かつ
+    輪郭の面積の割合がSTAND_BY_AREA_MIN以上STAND_BY_AREA_MAXのときスタンバイ終了とする
+    また，スタンバイ終了時にbody.max_body_heightを設定しておく
+
+    Args:
+        background(np.ndarray): 背景画像(カラー画像)
+        body(BodyCoordinates): BodyCoordinates()
+
+    Returns:
+        None
+
+    """
     cap = cv2.VideoCapture(0)
 
     while cv2.waitKey(1) != ord("q"):
         _, frame = cap.read()
-        fgmask = create_fgmask(bg, frame, 8)
+        fgmask = create_fgmask(background, frame, 8)
         src = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2BGR)
 
         try:
@@ -50,7 +69,8 @@ def stand_by(bg, body):
         except NotEnoughAreasError:
             pass
 
-        if body.x_y_ratio > STAND_BY_TH_X_Y_RATIO and frame.size * 0.05 < body.area < frame.size * 0.5:
+        if body.x_y_ratio > STAND_BY_TH_X_Y_RATIO and \
+                frame.size * STAND_BY_AREA_MIN < body.area < frame.size * STAND_BY_AREA_MAX:
             break
 
         body.draw(src)
@@ -58,13 +78,14 @@ def stand_by(bg, body):
 
     cap.release()
     cv2.destroyAllWindows()
+    body.get_max_body_height()
 
 
-def create_fgmask(bg, frame, kernel_size):
+def create_fgmask(background, frame, kernel_size):
     """背景差分をとったフレーム出力を行う関数
 
     Args:
-        bg(np.ndarray):     差分をとるための背景画像
+        background(np.ndarray):     差分をとるための背景画像
         frame(np.ndarray):  背景と比較する毎フレーム
         kernel_size(int):   体のラインを強調するための膨張・収縮を行うカーネルサイズ
 
@@ -74,7 +95,7 @@ def create_fgmask(bg, frame, kernel_size):
     """
     kernel = np.ones((kernel_size, kernel_size), np.uint8)
     fgbg = cv2.bgsegm.createBackgroundSubtractorMOG()
-    fgbg.apply(bg)
+    fgbg.apply(background)
     fgmask = fgbg.apply(frame)
     hsv_mask = cv2.medianBlur(fgmask, ksize=5)
     hsv_mask = cv2.erode(hsv_mask, kernel)
@@ -82,62 +103,55 @@ def create_fgmask(bg, frame, kernel_size):
     return hsv_mask
 
 
+def pose_judgement(body, timer):
+    if body.waist.y - (body.head.y + body.foot.y) / 2 > WAIST_TH:
+        print('腰:下 ', end='')
+    elif body.waist.y - (body.head.y + body.foot.y) / 2 < -WAIST_TH:
+        print('腰:上 ', end='')
+    else:
+        print('腰:ok ', end='')
+
+    if timer.current_time > VELOCITY_MEASURE_TIME:
+        if body.length_until_v_measure_time == 0:
+            body.length_until_v_measure_time = len(body.displacements)
+            v = abs(body.displacements[-1] - body.displacements[-body.length_until_v_measure_time])
+            if v > v_th:
+                print('速度:早 ', end='')
+
+    if body.max_body_height * 0.4 > body.displacements[-1] and timer.lap_time == 0:
+        timer.lap_timer_start()
+        print('スタート')
+
+    else:
+        if (time.time() - timer.lap_time) < 3 and timer.lap_time != 0:
+            print('早い')
+        timer.lap_timer_reset()
+
+
 def main():
     bg = get_background()
     body = BodyCoordinates()
     cap = cv2.VideoCapture(0)
 
-    stand_by(bg, body)
+    stand_by(background=bg, body=body)
 
-    start_time = time.time()
-    displacements = []
-    sound = Sound()
-    length = 0
-    low_timer = 0
-    max_h = body.foot.y - body.head.y
+    timer = Timer()
+    timer.start()
 
     while True:
         _, frame = cap.read()
         fgmask = create_fgmask(bg, frame, 8)
         src = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2BGR)
+
         try:
             body.get_coordinates(fgmask)
 
         except NotEnoughAreasError:
             pass
 
-        # if body.waist.y - (body.head.y + body.foot.y) / 2 > WAIST_TH:
-        #     print('下')
-        # elif body.waist.y - (body.head.y + body.foot.y) / 2 < -WAIST_TH:
-        #     print('上')
-        # else:
-        #     print('ok')
+        body.get_body_height_displacements()
+        pose_judgement(body, timer)
 
-        displacements.append(body.foot.y - body.head.y)
-        if len(displacements) >= 1500:
-            displacements.pop(0)
-
-        if time.time() - start_time > VELOCITY_MEASURE_TIME:
-            if length == 0:
-                length = len(displacements)
-
-            v = abs(displacements[-1] - displacements[-length])
-
-            # if v > v_th:
-            #     sound.play('voice/test.wav')
-
-        if max_h * 0.4 > displacements[-1]:
-            if low_timer == 0:
-                low_timer = time.time()
-                print('スタート')
-
-        else:
-            # low_timer.stop
-            if (time.time() - low_timer) < 3 and low_timer != 0:
-                print('早い')
-            low_timer = 0
-
-        print(low_timer)
         body.draw(image=src)
         body.draw(image=frame)
 
