@@ -103,10 +103,14 @@ def create_fgmask(background, frame, kernel_size):
 
 
 def pose_judgement(body, timer):
-    if body.waist.y - (body.head.y + body.foot.y) / 2 > WAIST_TH:
-        print('腰:下 ', end='')
-    elif body.waist.y - (body.head.y + body.foot.y) / 2 < -WAIST_TH:
-        print('腰:上 ', end='')
+    if body.max_body_height * LOW_FORM_RATIO > body.displacements[-1]:
+        timer.lap_timer_start()
+        print('低姿勢 ', end='')
+
+    else:
+        if timer.current_lap_time < LOW_FORM_TIME and timer.lap_time != 0:
+            print('上げるの早い', end='')
+        timer.lap_timer_reset()
 
     if timer.current_time > VELOCITY_MEASURE_TIME:
         if body.length_until_v_measure_time == 0:
@@ -116,14 +120,10 @@ def pose_judgement(body, timer):
         if v > V_TH:
             print('速度:早 ', end='')
 
-    if body.max_body_height * LOW_FORM_RATIO > body.displacements[-1]:
-        timer.lap_timer_start()
-        print('低姿勢 ', end='')
-
-    else:
-        if timer.current_lap_time < LOW_FORM_TIME and timer.lap_time != 0:
-            print('上げるの早い', end='')
-        timer.lap_timer_reset()
+    if body.waist.y - (body.head.y + body.foot.y) / 2 > WAIST_TH:
+        print('腰:下 ', end='')
+    elif body.waist.y - (body.head.y + body.foot.y) / 2 < -WAIST_TH:
+        print('腰:上 ', end='')
 
     print('')
 
@@ -166,4 +166,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+
+    import simpleaudio
+
+    wav_obj = simpleaudio.WaveObject.from_wave_file("voice/test.wav")
+    play_obj = wav_obj.play()
+    play_obj.wait_done()
