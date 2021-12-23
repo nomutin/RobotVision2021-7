@@ -131,7 +131,10 @@ class Timer:
         self.time = 0
 
     def lap_timer_start(self):
-        self.lap_time = time.time()
+        if self.lap_time != 0:
+            return
+        else:
+            self.lap_time = time.time()
 
     def lap_timer_reset(self):
         self.lap_time = 0

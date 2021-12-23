@@ -108,24 +108,25 @@ def pose_judgement(body, timer):
         print('腰:下 ', end='')
     elif body.waist.y - (body.head.y + body.foot.y) / 2 < -WAIST_TH:
         print('腰:上 ', end='')
-    else:
-        print('腰:ok ', end='')
 
     if timer.current_time > VELOCITY_MEASURE_TIME:
         if body.length_until_v_measure_time == 0:
             body.length_until_v_measure_time = len(body.displacements)
-            v = abs(body.displacements[-1] - body.displacements[-body.length_until_v_measure_time])
-            if v > v_th:
-                print('速度:早 ', end='')
 
-    if body.max_body_height * 0.4 > body.displacements[-1] and timer.lap_time == 0:
+        v = abs(body.displacements[-1] - body.displacements[-body.length_until_v_measure_time])
+        if v > V_TH:
+            print('速度:早 ', end='')
+
+    if body.max_body_height * LOW_FORM_RATIO > body.displacements[-1]:
         timer.lap_timer_start()
-        print('スタート')
+        print('低姿勢 ', end='')
 
     else:
-        if (time.time() - timer.lap_time) < 3 and timer.lap_time != 0:
-            print('早い')
+        if timer.current_lap_time < LOW_FORM_TIME and timer.lap_time != 0:
+            print('上げるの早い', end='')
         timer.lap_timer_reset()
+
+    print('')
 
 
 def main():
