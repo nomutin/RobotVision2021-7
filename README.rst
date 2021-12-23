@@ -11,7 +11,7 @@ CONFIG
     main()など全体の流れが書いてある
 
 - ``RobotVision2021-7/helpers.py``
-    BodyCoordinates()などcore.pyに載せると冗長になる部分をこっちに書いてる
+    core.pyに載せると冗長になる部分をこっちに書いてる
     ある意味ここが一番大事
 
 - ``RobotVision2021-7/constants.py``
@@ -37,14 +37,11 @@ USAGE
     ``poetry run python robotvision2021_7 -m``
 
 
-poetryが無くてもopencv-pythonが実行できる環境なら
+poetryが無くてもopencv-python・simpleaudioが実行できる環境なら
 
     ``python robotvision2021_7 -m``
 
 で動きます
 
-VERIFY
------
-白背景に全身黒でトレーニングだ
 
 .. _Poetry: https://github.com/python-poetry/poetry

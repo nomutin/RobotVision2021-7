@@ -166,10 +166,4 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
-
-    import simpleaudio
-
-    wav_obj = simpleaudio.WaveObject.from_wave_file("voice/test.wav")
-    play_obj = wav_obj.play()
-    play_obj.wait_done()
+    main()

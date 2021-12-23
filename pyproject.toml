@@ -8,6 +8,7 @@ authors = ["nomutin <nomura0508@icloud.com>"]
 python = ">=3.9,<3.11"
 opencv-python = "^4.5.4"
 opencv-contrib-python = "^4.5.4"
+simpleaudio = "^1.0.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
