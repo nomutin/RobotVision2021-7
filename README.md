@@ -1,6 +1,6 @@
 # ロボットビジョン2021-team7
 
-![python](https://img.shields.io/badge/python-3.6|3.7|3.8|3.9|3.10-blue)
+![python](https://img.shields.io/badge/python-3.6|3.7|3.8|3.9-blue)
     
     
 ## USAGE
@@ -66,7 +66,7 @@
     core.pyに載せると冗長になる部分をこのファイルに書いています．
 
 - ``robotvision2021_7/constants.py``
-- 
+
     しきい値などのパラメータがまとめて記述してあります．
 
 - ``pyproject.toml`` ・ ``poetry.lock``
