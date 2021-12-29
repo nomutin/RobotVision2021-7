@@ -2,6 +2,11 @@
 
   腕立て伏せのフォームが悪かったら本気で怒号を飛ばすアプリ
 
+  TODO:
+    * pose_judgementの説明書く
+    * mainの説明書く
+    * 声の迫力足りない
+
 """
 
 
@@ -12,7 +17,7 @@ from constants import *
 from helpers import (
     BodyCoordinates,
     NotEnoughAreasError,
-    Sound,
+    SoundPlayer,
     Timer
 )
 
@@ -46,7 +51,7 @@ def stand_by(background, body):
 
     Args:
         background(np.ndarray): 背景画像(カラー画像)
-        body(BodyCoordinates): BodyCoordinates()
+        body(BodyCoordinates): 体の座標情報
 
     Returns:
         None
@@ -81,9 +86,9 @@ def create_fgmask(background, frame, kernel_size):
     """背景差分をとったフレーム出力を行う関数
 
     Args:
-        background(np.ndarray):     差分をとるための背景画像
+        background(np.ndarray): 差分をとるための背景画像
         frame(np.ndarray):  背景と比較する毎フレーム
-        kernel_size(int):   体のラインを強調するための膨張・収縮を行うカーネルサイズ
+        kernel_size(int): 体のラインを強調するための膨張・収縮を行うカーネルサイズ
 
     Returns:
         fgmask(np.ndarray): 背景との差分(2値画像)
@@ -99,45 +104,53 @@ def create_fgmask(background, frame, kernel_size):
     return hsv_mask
 
 
-def pose_judgement(body, timer):
+def pose_judgement(body, timer, player):
+    """姿勢の判定を行う関数
+
+    Args:
+        body(BodyCoordinates): 体の座標情報
+        timer(Timer): タイマー
+        player(SoundPlayer): 音声プレーヤー
+
+    Returns:
+        None
+
+    """
     if body.max_body_height * LOW_FORM_RATIO > body.displacements[-1]:
         timer.lap_timer_start()
-        print('低姿勢 ', end='')
 
     else:
         if timer.current_lap_time < LOW_FORM_TIME and timer.lap_time != 0:
-            print('上げるの早い', end='')
+            player.play('bear')
         timer.lap_timer_reset()
 
     if timer.current_time > VELOCITY_MEASURE_TIME:
-        if body.length_until_v_measure_time == 0:
-            body.length_until_v_measure_time = len(body.displacements)
+        if body.fps == 0:
+            body.fps = len(body.displacements)
 
-        v = abs(body.displacements[-1] - body.displacements[-body.length_until_v_measure_time])
+        v = abs(body.displacements[-1] - body.displacements[-body.fps])
         if v > V_TH:
-            print('速度:早 ', end='')
+            player.play('fast')
 
     if body.waist.y - (body.head.y + body.foot.y) / 2 > WAIST_TH:
-        print('腰:下 ', end='')
+        player.play('low')
     elif body.waist.y - (body.head.y + body.foot.y) / 2 < -WAIST_TH:
-        print('腰:上 ', end='')
-
-    print('')
+        player.play('high')
 
 
 def main():
-    bg = get_background()
-    body = BodyCoordinates()
+    bg = get_background()               # 背景画像を撮影
+    body = BodyCoordinates()            # 体の座標を定義
+    stand_by(background=bg, body=body)  # 腕立ての体制になるまでスタンバイ
+    timer = Timer()
+    timer.start()                       # タイマースタート
+    sound_player = SoundPlayer()        # 音楽プレーヤーを定義
+
     cap = cv2.VideoCapture(0)
 
-    stand_by(background=bg, body=body)
-
-    timer = Timer()
-    timer.start()
-
-    while True:
+    while cv2.waitKey(1) != ord("q"):
         _, frame = cap.read()
-        fgmask = create_fgmask(bg, frame, 8)
+        fgmask = create_fgmask(background=bg, frame=frame, kernel_size=8)
         src = cv2.cvtColor(fgmask, cv2.COLOR_GRAY2BGR)
 
         try:
@@ -146,8 +159,8 @@ def main():
         except NotEnoughAreasError:
             pass
 
-        body.get_body_height_displacements()
-        pose_judgement(body, timer)
+        body.get_displacements()
+        pose_judgement(body=body, timer=timer, player=sound_player)
 
         body.draw(image=src)
         body.draw(image=frame)
@@ -155,12 +168,10 @@ def main():
         cv2.imshow('mask', src)
         cv2.imshow("flow", frame)
 
-        if cv2.waitKey(1) == ord("q"):
-            break
-
     cap.release()
     cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':
     main()
+
