@@ -3,6 +3,7 @@
 import dataclasses
 import time
 import typing
+import random
 
 import cv2
 import numpy as np
@@ -156,7 +157,10 @@ class SoundPlayer:
         if self.play_obj.is_playing():
             return
 
-        self.play_obj = simpleaudio.WaveObject.from_wave_file(self.voices[key]).play()
+        if random.randint(1, 5) >= 4:
+            self.play_obj = simpleaudio.WaveObject.from_wave_file(self.voices['oi']).play()
+        else:
+            self.play_obj = simpleaudio.WaveObject.from_wave_file(self.voices[key]).play()
 
 
 class Timer:

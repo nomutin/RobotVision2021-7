@@ -2,11 +2,6 @@
 
   腕立て伏せのフォームが悪かったら本気で怒号を飛ばすアプリ
 
-  TODO:
-    * 声の迫力足りない
-    * 褒める音声も入れる
-    * 『おい！！』も再生するようにする
-
 """
 
 
@@ -201,8 +196,3 @@ def main():
     else:
         cap.release()
         cv2.destroyAllWindows()
-
-
-if __name__ == '__main__':
-    main()
-
